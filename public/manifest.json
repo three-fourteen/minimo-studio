@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Minimo - Image Converter & Studio",
+  "version": "1.0.0",
+  "description": "Convert and optimize images to WebP, AVIF, PNG, JPG, BMP & ICO with a quick popup, side panel studio, and right-click context menu.",
+  "permissions": [
+    "contextMenus",
+    "downloads",
+    "storage",
+    "sidePanel",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Minimo Quick Converter",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

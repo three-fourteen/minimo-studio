@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minimo Quick Converter</title>
+    <link rel="stylesheet" href="/src/styles/theme.css" />
+    <link rel="stylesheet" href="/src/styles/components.css" />
+    <link rel="stylesheet" href="/src/popup/popup.css" />
+  </head>
+  <body>
+    <div id="app" class="popup-container">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="brand-wrapper">
+          <img src="/icons/icon-48.png" class="brand-logo-img" alt="Minimo logo" />
+          <div>
+            <div class="brand-title">Minimo</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="btn-theme-toggle" class="btn btn-icon btn-sm" title="Toggle Theme">
+          </button>
+          <button id="btn-open-sidepanel" class="btn btn-ghost btn-sm" title="Open Full Studio in Side Panel">
+            <span>Side Panel</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2"/>
+              <path d="M15 3v18"/>
+              <path d="m10 9-3 3 3 3"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Body -->
+      <main class="popup-content">
+        <!-- Target Format Selector -->
+        <section class="section">
+          <div class="section-label">Convert To</div>
+          <div class="format-grid" id="format-grid">
+            <!-- Format buttons injected dynamically -->
+          </div>
+        </section>
+
+        <!-- Dropzone / Empty State -->
+        <div id="dropzone" class="dropzone">
+          <input type="file" id="file-input" multiple accept="image/*" style="display: none" />
+          <div class="dropzone-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="dropzone-title">Drop images here or <span class="text-link">browse</span></div>
+          <div class="dropzone-subtitle">Supports JPG, PNG, WebP, AVIF, BMP, GIF, SVG</div>
+          <div class="dropzone-paste-hint">💡 Tip: Press <kbd>Cmd+V</kbd> / <kbd>Ctrl+V</kbd> to paste from clipboard</div>
+        </div>
+
+        <!-- Conversion Settings -->
+        <div id="settings-panel" class="settings-card glass-panel">
+          <!-- Quality Slider (shown for WebP, JPG, AVIF) -->
+          <div id="quality-container" class="slider-group">
+            <div class="slider-header">
+              <span>Quality / Compression</span>
+              <span id="quality-val" class="slider-val">85%</span>
+            </div>
+            <input type="range" id="quality-slider" class="custom-range" min="10" max="100" value="85" />
+            <div class="slider-labels">
+              <span>Smaller Size</span>
+              <span>Balanced</span>
+              <span>Best Quality</span>
+            </div>
+          </div>
+
+          <!-- Scale Selector -->
+          <div class="scale-group">
+            <div class="section-label">Scale Preset</div>
+            <div class="segmented-control" id="scale-control">
+              <button class="segmented-btn active" data-scale="1">100%</button>
+              <button class="segmented-btn" data-scale="0.75">75%</button>
+              <button class="segmented-btn" data-scale="0.5">50%</button>
+              <button class="segmented-btn" data-scale="0.25">25%</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview & Results List -->
+        <div id="preview-container" style="display: none; flex-direction: column; gap: 8px;">
+          <div id="popup-queue-header" class="queue-header-row">
+            <label class="master-select-wrap" title="Select / Deselect All">
+              <input type="checkbox" id="chk-select-all-popup" class="item-checkbox" checked />
+              <span class="section-label">Select All</span>
+            </label>
+            <span id="popup-selection-badge" class="badge badge-primary">0/0 Selected</span>
+          </div>
+          <div id="preview-list" class="preview-list"></div>
+        </div>
+      </main>
+
+      <!-- Footer Action -->
+      <footer id="popup-footer" class="popup-footer" style="display: none">
+        <button id="btn-clear" class="btn btn-secondary btn-sm">Clear</button>
+        <button id="btn-download-all" class="btn btn-primary" style="flex: 1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span id="download-btn-text">Download Converted</span>
+        </button>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/popup/popup.ts"></script>
+  </body>
+</html>

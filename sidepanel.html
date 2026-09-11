@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minimo Studio</title>
+    <link rel="stylesheet" href="/src/styles/theme.css" />
+    <link rel="stylesheet" href="/src/styles/components.css" />
+    <link rel="stylesheet" href="/src/sidepanel/sidepanel.css" />
+  </head>
+  <body>
+    <div id="app" class="studio-container">
+      <!-- Studio Header -->
+      <header class="app-header">
+        <div class="brand-wrapper">
+          <img src="/icons/icon-48.png" class="brand-logo-img" alt="Minimo logo" />
+          <div>
+            <div class="brand-title">Minimo Studio</div>
+          </div>
+          <span class="brand-badge">Advanced</span>
+        </div>
+        <div class="header-actions">
+          <button id="btn-theme-toggle" class="btn btn-icon btn-sm" title="Toggle Theme">
+          </button>
+          <button id="btn-header-add" class="btn btn-secondary btn-sm" title="Add Images">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Add</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Layout -->
+      <main class="studio-body">
+        <!-- Split Comparison Viewer (Active Image) -->
+        <section id="comparison-section" class="studio-card glass-panel" style="display: none">
+          <div class="card-header">
+            <span class="card-title">Live Preview & Quality Inspection</span>
+            <div class="preview-meta" id="active-image-meta"></div>
+          </div>
+
+          <div class="split-viewer" id="split-viewer" style="--split-pos: 50%">
+            <!-- Converted Image (Base Layer) -->
+            <div class="split-layer split-layer-bottom">
+              <img id="split-img-converted" src="" alt="Converted" />
+            </div>
+            <!-- Original Image (Clipped Top Layer) -->
+            <div class="split-layer split-layer-top" id="split-clip-layer">
+              <img id="split-img-original" src="" alt="Original" />
+            </div>
+            <!-- Overlay Badges -->
+            <span class="split-tag split-tag-left">Original</span>
+            <span class="split-tag split-tag-right" id="split-tag-converted">Converted</span>
+            <!-- Drag Handle -->
+            <div class="split-handle" id="split-handle">
+              <div class="split-handle-btn">↔</div>
+            </div>
+          </div>
+
+          <!-- Active Item Details Bar -->
+          <div class="active-item-bar">
+            <div class="savings-display" id="active-savings-display">
+              <!-- Injected dynamically -->
+            </div>
+            <div class="active-item-actions">
+              <button id="btn-download-active" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span>Save Converted</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Dropzone / Empty State -->
+        <div id="studio-dropzone" class="dropzone">
+          <input type="file" id="studio-file-input" multiple accept="image/*" style="display: none" />
+          <div class="dropzone-icon-wrap">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+              <circle cx="9" cy="9" r="2"/>
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+            </svg>
+          </div>
+          <div class="dropzone-title">Drop images or click to browse</div>
+          <div class="dropzone-subtitle">Batch convert dozens of images simultaneously</div>
+          <div class="dropzone-paste-hint">📋 Paste from clipboard (<kbd>Cmd+V</kbd>) or right-click any web image</div>
+        </div>
+
+        <!-- Conversion Settings Card -->
+        <section class="studio-card glass-panel">
+          <div class="card-header">
+            <span class="card-title">Conversion Settings</span>
+          </div>
+
+          <!-- Format Picker -->
+          <div class="setting-row">
+            <label class="setting-label">Target Format</label>
+            <div class="format-grid" id="studio-format-grid"></div>
+          </div>
+
+          <!-- Quality Slider -->
+          <div class="setting-row" id="studio-quality-row">
+            <div class="slider-header">
+              <label class="setting-label">Quality / Compression</label>
+              <span id="studio-quality-val" class="slider-val">85%</span>
+            </div>
+            <input type="range" id="studio-quality-slider" class="custom-range" min="5" max="100" value="85" />
+            <div class="preset-buttons">
+              <button class="btn btn-secondary btn-sm preset-btn" data-quality="100">100% Max</button>
+              <button class="btn btn-secondary btn-sm preset-btn" data-quality="85">85% High</button>
+              <button class="btn btn-secondary btn-sm preset-btn" data-quality="75">75% Balanced</button>
+              <button class="btn btn-secondary btn-sm preset-btn" data-quality="50">50% Small</button>
+            </div>
+          </div>
+
+          <!-- Dimension & Scaling Tools -->
+          <div class="setting-row">
+            <div class="setting-header-with-toggle">
+              <label class="setting-label">Resize & Scale</label>
+              <div class="segmented-control" id="resize-mode-control">
+                <button class="segmented-btn active" data-mode="scale">Scale %</button>
+                <button class="segmented-btn" data-mode="custom">Custom Px</button>
+              </div>
+            </div>
+
+            <!-- Scale Percentages -->
+            <div id="scale-controls" class="segmented-control">
+              <button class="segmented-btn" data-scale="0.25">25%</button>
+              <button class="segmented-btn" data-scale="0.5">50%</button>
+              <button class="segmented-btn" data-scale="0.75">75%</button>
+              <button class="segmented-btn active" data-scale="1">100%</button>
+              <button class="segmented-btn" data-scale="1.5">150%</button>
+              <button class="segmented-btn" data-scale="2">200%</button>
+            </div>
+
+            <!-- Custom Pixel Dimensions -->
+            <div id="custom-dim-controls" class="dim-inputs-grid" style="display: none">
+              <div class="input-field-group">
+                <span class="input-label">Width (px)</span>
+                <input type="number" id="dim-width" class="custom-input" placeholder="Auto" min="1" />
+              </div>
+              <div class="aspect-lock-btn-wrap">
+                <button id="btn-lock-aspect" class="btn btn-icon active" title="Lock Aspect Ratio">🔒</button>
+              </div>
+              <div class="input-field-group">
+                <span class="input-label">Height (px)</span>
+                <input type="number" id="dim-height" class="custom-input" placeholder="Auto" min="1" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Image Filters & Transparency -->
+          <div class="setting-row">
+            <label class="setting-label">Color & Adjustments</label>
+            <div class="toggles-grid">
+              <label class="toggle-wrap">
+                <span class="toggle-label">Grayscale</span>
+                <div class="switch">
+                  <input type="checkbox" id="filter-grayscale" />
+                  <span class="slider-switch"></span>
+                </div>
+              </label>
+              <label class="toggle-wrap">
+                <span class="toggle-label">Invert Colors</span>
+                <div class="switch">
+                  <input type="checkbox" id="filter-invert" />
+                  <span class="slider-switch"></span>
+                </div>
+              </label>
+            </div>
+
+            <!-- Background color for transparency -->
+            <div class="bg-color-row" id="bg-color-row">
+              <span class="setting-label-sub">Alpha Background Fill:</span>
+              <div class="color-options">
+                <button class="color-swatch active" data-color="#ffffff" style="background: #ffffff" title="White"></button>
+                <button class="color-swatch" data-color="#000000" style="background: #000000" title="Black"></button>
+                <button class="color-swatch" data-color="transparent" style="background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px" title="Transparent"></button>
+                <input type="color" id="custom-color-picker" value="#ffffff" title="Custom Color" class="custom-color-input" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Filename Pattern -->
+          <div class="setting-row">
+            <label class="setting-label">Output Filename Pattern</label>
+            <select id="filename-pattern" class="custom-input">
+              <option value="{name}-converted.{ext}">{name}-converted.{ext}</option>
+              <option value="{name}_opti.{ext}">{name}_opti.{ext}</option>
+              <option value="{name}_{width}x{height}.{ext}">{name}_{width}x{height}.{ext}</option>
+              <option value="{name}.{ext}">{name}.{ext} (Overwrite name)</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Batch Queue Section -->
+        <section id="queue-section" class="studio-card glass-panel" style="display: none">
+          <div class="card-header">
+            <div class="queue-title-wrap">
+              <label class="master-select-wrap" title="Select / Deselect All">
+                <input type="checkbox" id="chk-select-all" class="item-checkbox" checked />
+                <span class="card-title">Queue</span>
+              </label>
+              <span id="queue-count-badge" class="badge badge-primary">0/0 Selected</span>
+            </div>
+            <div class="header-actions">
+              <button id="btn-reprocess-all" class="btn btn-secondary btn-sm" title="Regenerate all images with current settings">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                <span>Regenerate All</span>
+              </button>
+              <button id="btn-clear-queue" class="btn btn-ghost btn-sm">Clear All</button>
+            </div>
+          </div>
+
+          <!-- Total Batch Summary -->
+          <div id="batch-summary-bar" class="batch-summary-bar">
+            <!-- Injected dynamically -->
+          </div>
+
+          <!-- Queue Items List -->
+          <div id="studio-queue-list" class="studio-queue-list"></div>
+        </section>
+      </main>
+
+      <!-- Studio Sticky Footer -->
+      <footer id="studio-footer" class="studio-footer" style="display: none">
+        <button id="btn-batch-download-zip" class="btn btn-success btn-block">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span id="batch-zip-btn-text">Download All as ZIP</span>
+        </button>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/sidepanel/sidepanel.ts"></script>
+  </body>
+</html>
