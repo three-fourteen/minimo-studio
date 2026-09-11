@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "pack": "pnpm run build && node scripts/pack-extension.js",
     "preview": "vite preview"
   },
   "dependencies": {
