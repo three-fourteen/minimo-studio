@@ -49,7 +49,7 @@ export const FORMAT_OPTIONS: ImageFormatOption[] = [
     mimeType: 'image/x-icon',
     extension: 'ico',
     supportsQuality: false,
-    description: 'Standard multi-size browser favicon format.',
+    description: 'Favicon-style ICO (single embedded PNG).',
   },
 ];
 

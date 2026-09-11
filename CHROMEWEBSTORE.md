@@ -44,12 +44,12 @@ English
 ```text
 Minimo Studio is a fast, lightweight, and 100% private image converter and optimizer that runs entirely inside your browser.
 
-Convert, compress, and resize images across WebP, AVIF, PNG, JPG, BMP, and ICO with zero file size limits, zero server uploads, and complete privacy.
+Convert, compress, and resize images across WebP, AVIF, PNG, JPG, BMP, and ICO with no server uploads and complete privacy.
 
 KEY FEATURES
 
 • Right-Click Any Web Image: Convert and download any image directly from the context menu (WebP, PNG, JPG, AVIF) or open it instantly in the side panel studio.
-• Side Panel Studio (chrome.sidePanel): An interactive workspace featuring a side-by-side split comparison slider to inspect quality before downloading.
+• Side Panel Studio: An interactive workspace featuring a side-by-side split comparison slider to inspect quality before downloading.
 • Quick Toolbar Popup: Fast drag-and-drop or clipboard paste (Cmd+V / Ctrl+V) for instant conversions on the go.
 • Batch Processing & Selective Download: Convert dozens of images simultaneously. Download all as a ZIP archive or pick individual files.
 • Precision Controls: Adjust compression quality (1-100%), scale percentages (25% to 200%), or set exact width and height with aspect ratio locking.
@@ -64,11 +64,11 @@ SUPPORTED FORMATS
 • JPG / JPEG (Configurable background color fill)
 • PNG (Lossless with alpha channel)
 • BMP (Standard bitmap)
-• ICO (Multi-size browser favicons)
+• ICO (favicon)
 
 100% PRIVATE & OFFLINE
 
-All conversions are processed client-side using HTML5 Canvas and Web APIs. Your images never leave your computer and are never uploaded to any remote server or third-party service.
+All conversions run locally in your browser. Images are never uploaded to a remote server or third-party service.
 
 HOW TO USE
 
