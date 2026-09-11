@@ -1,60 +1,63 @@
 import { convertImage } from '../shared/converter';
 import { ImageFormat } from '../shared/types';
-import { extractBaseName, getFormatOption } from '../shared/utils';
+import { blobToDataURL, extractBaseName, getFormatOption } from '../shared/utils';
 
-// Listen for conversion requests from Service Worker
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === 'OFFSCREEN_CONVERT') {
-    handleOffscreenConvert(message.payload)
-      .then((res) => sendResponse({ success: true, result: res }))
-      .catch((err) => {
-        console.error('Offscreen conversion error:', err);
-        sendResponse({ success: false, error: err.message });
-      });
-    return true; // Keep message channel open for async response
-  }
+  if (message.type !== 'OFFSCREEN_CONVERT') return;
+
+  (async () => {
+    try {
+      const result = await handleOffscreenConvert(message.payload);
+      sendResponse({ success: true, result });
+    } catch (err) {
+      console.error('Offscreen conversion error:', err);
+      const error = err instanceof Error ? err.message : 'Conversion failed';
+      sendResponse({ success: false, error });
+    }
+  })();
+
+  return true;
 });
 
 async function handleOffscreenConvert(payload: {
   srcUrl: string;
   format: ImageFormat;
   quality?: number;
-}): Promise<{ dataUrl: string; filename: string; size: number }> {
+}): Promise<{ blobUrl: string; dataUrl: string; filename: string; size: number }> {
   const { srcUrl, format, quality = 0.85 } = payload;
 
   let sourceBlob: Blob | HTMLImageElement;
   let originalName = 'web_image';
 
-  // Extract clean filename from URL if possible
   try {
     const urlObj = new URL(srcUrl);
     const pathname = urlObj.pathname;
     const segments = pathname.split('/').filter(Boolean);
     if (segments.length > 0) {
       const last = segments[segments.length - 1];
-      originalName = extractBaseName(last) || 'web_image';
+      originalName = sanitizeDownloadBasename(extractBaseName(last)) || 'web_image';
     }
   } catch {
     originalName = 'web_image';
   }
 
-  // 1. Fetch image resource (or fallback to Image element)
   try {
     const response = await fetch(srcUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image (${response.status})`);
+    }
     sourceBlob = await response.blob();
   } catch {
-    // Fallback if fetch fails (e.g. data URL or cross-origin canvas load)
     const img = new Image();
     img.crossOrigin = 'anonymous';
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
-      img.onerror = (e) => reject(new Error('Failed to load image element: ' + e));
+      img.onerror = () => reject(new Error('Failed to load image element'));
       img.src = srcUrl;
     });
     sourceBlob = img;
   }
 
-  // 2. Perform conversion
   const result = await convertImage(
     sourceBlob,
     {
@@ -68,11 +71,21 @@ async function handleOffscreenConvert(payload: {
 
   const ext = getFormatOption(format).extension;
   const filename = `${originalName}.${ext}`;
+  const blobUrl = URL.createObjectURL(result.blob);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 
-  // Return dataUrl to Service Worker so Service Worker can invoke chrome.downloads
   return {
-    dataUrl: result.dataUrl,
-    filename: filename,
+    blobUrl,
+    dataUrl: await blobToDataURL(result.blob),
+    filename,
     size: result.size,
   };
+}
+
+function sanitizeDownloadBasename(name: string): string {
+  const cleaned = name
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .replace(/^\.+/u, '_')
+    .trim();
+  return cleaned || 'web_image';
 }

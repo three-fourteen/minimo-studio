@@ -1,7 +1,9 @@
 import { convertImage } from '../shared/converter';
+import { triggerBlobDownload } from '../shared/download';
 import { initTheme } from '../shared/theme';
 import { ConversionOptions, ImageFormat, QueueItem } from '../shared/types';
 import {
+  areConversionOptionsEqual,
   blobToDataURL,
   calculateSavings,
   createUniqueId,
@@ -9,7 +11,7 @@ import {
   formatBytes,
   getFormatOption,
 } from '../shared/utils';
-import { createBatchZip, triggerBlobDownload } from '../shared/zip';
+import { createBatchZip } from '../shared/zip';
 
 // State
 let selectedFormat: ImageFormat = 'webp';
@@ -17,6 +19,8 @@ let quality: number = 0.85;
 let scale: number = 1.0;
 let queue: QueueItem[] = [];
 let isProcessing: boolean = false;
+let processAgain = false;
+let currentTabId: number | undefined;
 const selectedItemIds = new Set<string>();
 
 // DOM Elements
@@ -46,6 +50,14 @@ function init(): void {
   setupEventListeners();
   updateQualityVisibility();
   loadSavedSettings();
+  cacheCurrentTab();
+}
+
+function cacheCurrentTab(): void {
+  if (typeof chrome === 'undefined' || !chrome.tabs?.query) return;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    currentTabId = tabs[0]?.id;
+  });
 }
 
 function renderFormatButtons(): void {
@@ -74,7 +86,7 @@ function renderFormatButtons(): void {
       pill.classList.add('active');
       updateQualityVisibility();
       saveSettings();
-      reprocessQueue();
+      refreshStaleUi();
     });
 
     formatGrid.appendChild(pill);
@@ -158,7 +170,7 @@ function setupEventListeners(): void {
     clearTimeout(qualityDebounce);
     qualityDebounce = setTimeout(() => {
       saveSettings();
-      reprocessQueue();
+      refreshStaleUi();
     }, 200);
   });
 
@@ -171,7 +183,7 @@ function setupEventListeners(): void {
       btn.classList.add('active');
       scale = parseFloat((btn as HTMLElement).dataset.scale || '1');
       saveSettings();
-      reprocessQueue();
+      refreshStaleUi();
     });
   });
 
@@ -194,32 +206,56 @@ function setupEventListeners(): void {
 
   // Side Panel Launcher
   btnOpenSidepanel.addEventListener('click', async () => {
-    if (typeof chrome !== 'undefined' && typeof chrome.sidePanel?.open === 'function') {
-      try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) {
-          // If we have items in queue, pass them to side panel via storage
-          if (queue.length > 0) {
-            await chrome.storage.local.set({
-              pendingQueue: queue.map((q) => ({
-                id: q.id,
-                name: q.name,
-                originalDataUrl: q.originalDataUrl,
-                originalSize: q.originalSize,
-                originalType: q.originalType,
-                originalWidth: q.originalWidth,
-                originalHeight: q.originalHeight,
-              })),
-            });
-          }
-          await chrome.sidePanel.open({ tabId: tab.id });
-          window.close();
-        }
-      } catch (err) {
-        console.error('Failed to open side panel:', err);
+    if (typeof chrome === 'undefined' || typeof chrome.sidePanel?.open !== 'function') {
+      return;
+    }
+    if (currentTabId == null) return;
+
+    try {
+      const openPromise = chrome.sidePanel.open({ tabId: currentTabId });
+
+      if (queue.length > 0) {
+        await chrome.storage.local.set({
+          pendingQueue: queue.map((q) => ({
+            id: q.id,
+            name: q.name,
+            originalDataUrl: q.originalDataUrl,
+            originalSize: q.originalSize,
+            originalType: q.originalType,
+            originalWidth: q.originalWidth,
+            originalHeight: q.originalHeight,
+          })),
+        });
       }
+
+      await openPromise;
+      window.close();
+    } catch (err) {
+      console.error('Failed to open side panel:', err);
     }
   });
+}
+
+function getCurrentOptions(): ConversionOptions {
+  return {
+    format: selectedFormat,
+    quality,
+    scale,
+    keepAspectRatio: true,
+  };
+}
+
+function isItemStale(item: QueueItem): boolean {
+  return (
+    item.status === 'completed' &&
+    !!item.result &&
+    !areConversionOptionsEqual(item.options, getCurrentOptions())
+  );
+}
+
+function refreshStaleUi(): void {
+  if (queue.length === 0) return;
+  renderQueueList();
 }
 
 async function handleFiles(files: File[]): Promise<void> {
@@ -236,13 +272,6 @@ async function handleFiles(files: File[]): Promise<void> {
         img.src = dataUrl;
       });
 
-      const options: ConversionOptions = {
-        format: selectedFormat,
-        quality: quality,
-        scale: scale,
-        keepAspectRatio: true,
-      };
-
       const item: QueueItem = {
         id: createUniqueId(),
         name: file.name,
@@ -252,7 +281,7 @@ async function handleFiles(files: File[]): Promise<void> {
         originalType: file.type || 'image/png',
         originalDataUrl: dataUrl,
         originalBlob: file,
-        options,
+        options: getCurrentOptions(),
         status: 'idle',
         timestamp: Date.now(),
       };
@@ -269,51 +298,49 @@ async function handleFiles(files: File[]): Promise<void> {
 }
 
 async function processQueue(): Promise<void> {
-  if (isProcessing) return;
+  if (isProcessing) {
+    processAgain = true;
+    return;
+  }
   isProcessing = true;
 
-  for (const item of queue) {
-    if (item.status === 'completed') continue;
-    item.status = 'processing';
-    updateQueueCard(item);
+  try {
+    do {
+      processAgain = false;
+      for (const item of queue) {
+        if (item.status === 'completed') continue;
+        item.status = 'processing';
+        updateQueueCard(item);
 
-    try {
-      item.options = {
-        format: selectedFormat,
-        quality: quality,
-        scale: scale,
-        keepAspectRatio: true,
-      };
+        try {
+          const opts = getCurrentOptions();
+          const result = await convertImage(
+            item.originalBlob,
+            opts,
+            item.name,
+            item.originalSize
+          );
 
-      const result = await convertImage(
-        item.originalBlob,
-        item.options,
-        item.name,
-        item.originalSize
-      );
+          if (item.status !== 'processing') continue;
+          item.options = opts;
+          item.result = result;
+          item.status = 'completed';
+        } catch (err: unknown) {
+          if (item.status !== 'processing') continue;
+          console.error('Conversion failed for item:', item.name, err);
+          item.status = 'error';
+          item.error = err instanceof Error ? err.message : 'Conversion error';
+        }
 
-      item.result = result;
-      item.status = 'completed';
-    } catch (err: any) {
-      console.error('Conversion failed for item:', item.name, err);
-      item.status = 'error';
-      item.error = err.message || 'Conversion error';
-    }
-
-    updateQueueCard(item);
-    updateSelectionUI();
+        updateQueueCard(item);
+        updateSelectionUI();
+      }
+    } while (processAgain);
+  } finally {
+    isProcessing = false;
   }
 
-  isProcessing = false;
   updateUI();
-}
-
-function reprocessQueue(): void {
-  if (queue.length === 0) return;
-  queue.forEach((item) => {
-    item.status = 'idle';
-  });
-  processQueue();
 }
 
 function updateSelectionUI(): void {
@@ -398,15 +425,23 @@ function getCardHtml(item: QueueItem): string {
   } else if (item.status === 'completed' && item.result) {
     const savings = calculateSavings(item.originalSize, item.result.size);
     const badgeClass = savings.isReduction ? 'badge-emerald' : 'badge-amber';
+    const stale = isItemStale(item);
     statusHtml = `
       <div class="preview-sizes">
         <span class="size-orig">${formatBytes(item.originalSize)}</span>
         <span class="size-arrow">➔</span>
         <span class="size-conv">${formatBytes(item.result.size)}</span>
         <span class="badge ${badgeClass}">${savings.formatted}</span>
+        ${stale ? '<span class="badge badge-amber">Outdated</span>' : ''}
       </div>
     `;
   }
+
+  const stale = isItemStale(item);
+  const regenClass = stale ? 'btn btn-icon btn-regen-item is-stale' : 'btn btn-icon btn-regen-item';
+  const regenTitle = stale
+    ? 'Settings changed — regenerate'
+    : 'Regenerate with current settings';
 
   return `
     <input type="checkbox" class="item-checkbox popup-item-chk" ${isChecked ? 'checked' : ''} title="Select for download" />
@@ -416,7 +451,7 @@ function getCardHtml(item: QueueItem): string {
       ${statusHtml}
     </div>
     <div class="preview-actions">
-      <button class="btn btn-icon btn-regen-item" title="Regenerate with current settings">
+      <button class="${regenClass}" title="${regenTitle}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
         </svg>
@@ -463,18 +498,14 @@ function attachCardEvents(card: HTMLElement, item: QueueItem): void {
       item.status = 'processing';
       updateQueueCard(item);
       try {
-        item.options = {
-          format: selectedFormat,
-          quality: quality,
-          scale: scale,
-          keepAspectRatio: true,
-        };
+        item.options = getCurrentOptions();
         const result = await convertImage(
           item.originalBlob,
           item.options,
           item.name,
           item.originalSize
         );
+        if (item.status !== 'processing') return;
         item.result = result;
         item.status = 'completed';
       } catch (err: any) {

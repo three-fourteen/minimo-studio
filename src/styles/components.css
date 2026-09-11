@@ -146,6 +146,16 @@
   transform: translateY(-1px);
 }
 
+.btn-icon.is-stale {
+  color: var(--amber);
+  border-color: var(--amber-border);
+}
+
+#btn-reprocess-all.is-stale {
+  color: var(--amber);
+  border-color: var(--amber-border);
+}
+
 .btn-success {
   background: var(--success-gradient);
   color: #fff;

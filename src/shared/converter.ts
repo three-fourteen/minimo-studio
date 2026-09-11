@@ -61,6 +61,34 @@ export function calculateTargetDimensions(
   return { width, height };
 }
 
+function formatRequiresOpaqueBackground(format: ImageFormat): boolean {
+  switch (format) {
+    case 'jpeg':
+    case 'bmp':
+      return true;
+    case 'png':
+    case 'webp':
+    case 'avif':
+    case 'ico':
+      return false;
+    default: {
+      const _exhaustive: never = format;
+      return _exhaustive;
+    }
+  }
+}
+
+function resolveBackgroundFill(
+  format: ImageFormat,
+  backgroundColor?: string
+): string | null {
+  const customFill =
+    backgroundColor && backgroundColor !== 'transparent' ? backgroundColor : null;
+  if (customFill) return customFill;
+  if (formatRequiresOpaqueBackground(format)) return '#ffffff';
+  return null;
+}
+
 /**
  * Core image converter function: transforms any input image to desired format & settings
  */
@@ -131,7 +159,12 @@ export async function convertImage(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  // Apply CSS filters if requested
+  const fillColor = resolveBackgroundFill(options.format, options.backgroundColor);
+  if (fillColor) {
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(0, 0, width, height);
+  }
+
   const filterParts: string[] = [];
   if (options.filters) {
     if (options.filters.grayscale) filterParts.push('grayscale(100%)');
@@ -153,16 +186,6 @@ export async function convertImage(
     ctx.filter = filterParts.join(' ');
   }
 
-  // Handle transparency & background fill for formats like JPEG / BMP or custom bg
-  const isTransparentFormat = options.format === 'png' || options.format === 'webp' || options.format === 'avif' || options.format === 'ico';
-  const shouldFillBackground = !isTransparentFormat || (options.backgroundColor && options.backgroundColor !== 'transparent');
-
-  if (shouldFillBackground) {
-    ctx.fillStyle = options.backgroundColor || '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-  }
-
-  // Draw scaled image onto canvas
   ctx.drawImage(imgBitmap, 0, 0, width, height);
 
   // Clean up ImageBitmap memory if applicable

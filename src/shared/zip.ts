@@ -33,27 +33,3 @@ export async function createBatchZip(
     compressionOptions: { level: 6 },
   });
 }
-
-export function triggerBlobDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  if (typeof chrome !== 'undefined' && chrome.downloads && chrome.downloads.download) {
-    chrome.downloads.download(
-      {
-        url: url,
-        filename: filename,
-        saveAs: false,
-      },
-      () => {
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-      }
-    );
-  } else {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
-}

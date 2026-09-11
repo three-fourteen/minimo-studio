@@ -2,91 +2,25 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
-// Master Vector SVG (512x512) for OptiConvert
-const masterSvg = `
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <!-- Background Gradient -->
-    <linearGradient id="bgGrad" x1="40" y1="40" x2="472" y2="472" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#4f46e5" />
-      <stop offset="45%" stop-color="#7c3aed" />
-      <stop offset="100%" stop-color="#d946ef" />
-    </linearGradient>
-
-    <!-- Subtle Inner Border Glow -->
-    <linearGradient id="borderGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.4)" />
-      <stop offset="100%" stop-color="rgba(255,255,255,0.05)" />
-    </linearGradient>
-
-    <!-- Conversion Accent Gradient -->
-    <linearGradient id="convertGrad" x1="160" y1="340" x2="400" y2="340" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#06b6d4" />
-    </linearGradient>
-
-    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.35" />
-    </filter>
-  </defs>
-
-  <!-- Main Squircle Background -->
-  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bgGrad)" />
-  <rect x="24" y="24" width="464" height="464" rx="108" stroke="url(#borderGrad)" stroke-width="8" />
-
-  <!-- Center Image Frame & Landscape Icon -->
-  <g filter="url(#dropShadow)">
-    <!-- Photo Frame Card -->
-    <rect x="100" y="100" width="312" height="236" rx="36" fill="#ffffff" />
-    
-    <!-- Photo Frame Inner Window -->
-    <rect x="124" y="124" width="264" height="188" rx="22" fill="#0f172a" />
-    
-    <!-- Sun / Moon Circle -->
-    <circle cx="184" cy="180" r="24" fill="#fbbf24" />
-    
-    <!-- Mountain Peak (Left / Back) -->
-    <path d="M152 312 L248 200 L324 312 Z" fill="#6366f1" />
-    
-    <!-- Mountain Peak (Right / Front) -->
-    <path d="M236 312 L308 228 L388 312 Z" fill="#a855f7" />
-  </g>
-
-  <!-- Modern Dual Conversion Arrows (Bottom Right Floating Badge) -->
-  <g filter="url(#dropShadow)">
-    <!-- Badge Circle -->
-    <circle cx="360" cy="360" r="88" fill="url(#convertGrad)" stroke="#ffffff" stroke-width="12" />
-    
-    <!-- Sync / Convert Dual Arrows in White -->
-    <!-- Top Arrow (Moving Right) -->
-    <path d="M324 336 C328 320 342 308 360 308 C374 308 386 316 392 328" stroke="#ffffff" stroke-width="14" stroke-linecap="round" fill="none" />
-    <polygon points="384,312 404,328 392,348" fill="#ffffff" />
-
-    <!-- Bottom Arrow (Moving Left) -->
-    <path d="M396 384 C392 400 378 412 360 412 C346 412 334 404 328 392" stroke="#ffffff" stroke-width="14" stroke-linecap="round" fill="none" />
-    <polygon points="336,408 316,392 328,372" fill="#ffffff" />
-  </g>
-</svg>
-`;
-
 const iconDir = path.resolve('public/icons');
-if (!fs.existsSync(iconDir)) {
-  fs.mkdirSync(iconDir, { recursive: true });
+const svgPath = path.join(iconDir, 'icon.svg');
+
+if (!fs.existsSync(svgPath)) {
+  console.error('Missing public/icons/icon.svg — cannot generate PNG icons.');
+  process.exit(1);
 }
 
-// Save master SVG
-fs.writeFileSync(path.join(iconDir, 'icon.svg'), masterSvg);
-
+const masterSvg = fs.readFileSync(svgPath);
 const sizes = [16, 32, 48, 128];
 
 async function generateAllIcons() {
   for (const size of sizes) {
     const outPath = path.join(iconDir, `icon-${size}.png`);
-    await sharp(Buffer.from(masterSvg))
+    await sharp(masterSvg)
       .resize(size, size, { fit: 'contain' })
       .png({ quality: 100, compressionLevel: 9 })
       .toFile(outPath);
-    console.log(`Generated high-res icon: ${outPath} (${size}x${size})`);
+    console.log(`Generated ${outPath} (${size}x${size})`);
   }
 }
 

@@ -1,7 +1,9 @@
 import { convertImage } from '../shared/converter';
+import { triggerBlobDownload } from '../shared/download';
 import { initTheme } from '../shared/theme';
 import { ConversionOptions, ImageFormat, QueueItem } from '../shared/types';
 import {
+  areConversionOptionsEqual,
   blobToDataURL,
   calculateSavings,
   createUniqueId,
@@ -9,7 +11,7 @@ import {
   formatBytes,
   getFormatOption,
 } from '../shared/utils';
-import { createBatchZip, triggerBlobDownload } from '../shared/zip';
+import { createBatchZip } from '../shared/zip';
 
 // State
 let selectedFormat: ImageFormat = 'webp';
@@ -21,13 +23,16 @@ let customHeight: number | undefined;
 let lockAspectRatio: boolean = true;
 let filterGrayscale: boolean = false;
 let filterInvert: boolean = false;
-let backgroundColor: string = '#ffffff';
+let backgroundColor: string = 'transparent';
 let filenamePattern: string = '{name}-converted.{ext}';
 
 let queue: QueueItem[] = [];
 let activeItemId: string | null = null;
 let isProcessing: boolean = false;
+let processAgain = false;
+let settingsDebounce: ReturnType<typeof setTimeout>;
 const selectedItemIds = new Set<string>();
+const importingSrcUrls = new Set<string>();
 
 // Split Slider State
 let isDraggingHandle: boolean = false;
@@ -108,7 +113,7 @@ function renderFormatButtons(): void {
         .forEach((p) => p.classList.remove('active'));
       pill.classList.add('active');
       updateQualityVisibility();
-      reprocessQueue();
+      onSettingsChanged(true);
     });
 
     studioFormatGrid.appendChild(pill);
@@ -135,6 +140,33 @@ function getCurrentOptions(): ConversionOptions {
     },
     filenamePattern: filenamePattern,
   };
+}
+
+function isItemStale(item: QueueItem): boolean {
+  return (
+    item.status === 'completed' &&
+    !!item.result &&
+    !areConversionOptionsEqual(item.options, getCurrentOptions())
+  );
+}
+
+function onSettingsChanged(affectsPreview: boolean): void {
+  if (queue.length > 0) {
+    renderQueueList();
+    updateSelectionUI();
+    updateActivePreview();
+  }
+
+  if (!affectsPreview) return;
+
+  clearTimeout(settingsDebounce);
+  settingsDebounce = setTimeout(() => {
+    if (isProcessing) return;
+    const active = getActiveItem();
+    if (active && isItemStale(active)) {
+      void regenerateSingleItem(active.id);
+    }
+  }, 200);
 }
 
 function updateQualityPresetButtons(val: number): void {
@@ -205,14 +237,13 @@ function setupEventListeners(): void {
   });
 
   // Quality slider
-  let debounceTimer: ReturnType<typeof setTimeout>;
   studioQualitySlider.addEventListener('input', () => {
     const val = parseInt(studioQualitySlider.value, 10);
     quality = val / 100;
     studioQualityVal.textContent = `${val}%`;
     updateQualityPresetButtons(val);
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => reprocessQueue(), 150);
+    clearTimeout(settingsDebounce);
+    settingsDebounce = setTimeout(() => onSettingsChanged(true), 150);
   });
 
   // Quality preset buttons
@@ -223,7 +254,7 @@ function setupEventListeners(): void {
       studioQualitySlider.value = String(q);
       studioQualityVal.textContent = `${q}%`;
       updateQualityPresetButtons(q);
-      reprocessQueue();
+      onSettingsChanged(true);
     });
   });
 
@@ -242,7 +273,7 @@ function setupEventListeners(): void {
         scaleControls.style.display = 'none';
         customDimControls.style.display = 'grid';
       }
-      reprocessQueue();
+      onSettingsChanged(true);
     });
   });
 
@@ -254,7 +285,7 @@ function setupEventListeners(): void {
         .forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       scale = parseFloat((btn as HTMLElement).dataset.scale || '1');
-      reprocessQueue();
+      onSettingsChanged(true);
     });
   });
 
@@ -263,6 +294,7 @@ function setupEventListeners(): void {
     lockAspectRatio = !lockAspectRatio;
     btnLockAspect.classList.toggle('active', lockAspectRatio);
     btnLockAspect.textContent = lockAspectRatio ? '🔒' : '🔓';
+    onSettingsChanged(true);
   });
 
   dimWidth.addEventListener('input', () => {
@@ -274,8 +306,8 @@ function setupEventListeners(): void {
       customHeight = Math.round(customWidth * ratio);
       dimHeight.value = String(customHeight);
     }
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => reprocessQueue(), 250);
+    clearTimeout(settingsDebounce);
+    settingsDebounce = setTimeout(() => onSettingsChanged(true), 250);
   });
 
   dimHeight.addEventListener('input', () => {
@@ -287,19 +319,19 @@ function setupEventListeners(): void {
       customWidth = Math.round(customHeight * ratio);
       dimWidth.value = String(customWidth);
     }
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => reprocessQueue(), 250);
+    clearTimeout(settingsDebounce);
+    settingsDebounce = setTimeout(() => onSettingsChanged(true), 250);
   });
 
   // Filters
   chkGrayscale.addEventListener('change', () => {
     filterGrayscale = chkGrayscale.checked;
-    reprocessQueue();
+    onSettingsChanged(true);
   });
 
   chkInvert.addEventListener('change', () => {
     filterInvert = chkInvert.checked;
-    reprocessQueue();
+    onSettingsChanged(true);
   });
 
   // Background color swatches
@@ -310,7 +342,7 @@ function setupEventListeners(): void {
         .forEach((s) => s.classList.remove('active'));
       swatch.classList.add('active');
       backgroundColor = (swatch as HTMLElement).dataset.color || '#ffffff';
-      reprocessQueue();
+      onSettingsChanged(true);
     });
   });
 
@@ -319,13 +351,14 @@ function setupEventListeners(): void {
       .querySelectorAll('.color-swatch')
       .forEach((s) => s.classList.remove('active'));
     backgroundColor = customColorPicker.value;
-    reprocessQueue();
+    clearTimeout(settingsDebounce);
+    settingsDebounce = setTimeout(() => onSettingsChanged(true), 150);
   });
 
   // Filename pattern
   filenamePatternSelect.addEventListener('change', () => {
     filenamePattern = filenamePatternSelect.value;
-    reprocessQueue();
+    onSettingsChanged(false);
   });
 
   // Actions
@@ -353,21 +386,12 @@ function setupEventListeners(): void {
     });
   }
 
-  // Chrome runtime listener for images sent via context menu
-  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
-    chrome.runtime.onMessage.addListener((msg) => {
-      if (msg.type === 'SEND_TO_SIDEPANEL' && msg.payload) {
-        importFromPayload(msg.payload);
-      }
-    });
-  }
-
   // Storage listener if image sent while sidepanel already opened
   if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local' && changes.pendingContextMenuImage?.newValue) {
         const srcUrl = changes.pendingContextMenuImage.newValue;
-        importFromPayload({ srcUrl });
+        void importFromPayload({ srcUrl });
         chrome.storage.local.remove('pendingContextMenuImage');
       }
     });
@@ -457,32 +481,58 @@ async function importFromPayload(payload: {
   srcUrl: string;
   filename?: string;
 }): Promise<void> {
+  const srcUrl = payload.srcUrl;
+  if (!srcUrl || importingSrcUrls.has(srcUrl)) return;
+  importingSrcUrls.add(srcUrl);
+
   try {
     let file: File;
+    const filename = payload.filename || filenameFromSrcUrl(srcUrl);
     try {
-      const response = await fetch(payload.srcUrl);
+      const response = await fetch(srcUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image (${response.status})`);
+      }
       const blob = await response.blob();
-      const filename = payload.filename || 'web_image.png';
       file = new File([blob], filename, { type: blob.type || 'image/png' });
     } catch {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
-        img.onerror = (e) => reject(new Error('Failed to load web image element: ' + e));
-        img.src = payload.srcUrl;
+        img.onerror = () => reject(new Error('Failed to load web image element'));
+        img.src = srcUrl;
       });
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
-      const ctx = canvas.getContext('2d')!;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not obtain 2D canvas context');
       ctx.drawImage(img, 0, 0);
-      const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'));
-      file = new File([blob], payload.filename || 'web_image.png', { type: 'image/png' });
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Failed to encode imported image'));
+        }, 'image/png');
+      });
+      file = new File([blob], filename, { type: 'image/png' });
     }
     await handleFiles([file]);
   } catch (err) {
     console.error('Failed to import image payload:', err);
+  } finally {
+    importingSrcUrls.delete(srcUrl);
+  }
+}
+
+function filenameFromSrcUrl(srcUrl: string): string {
+  try {
+    const last = new URL(srcUrl).pathname.split('/').filter(Boolean).pop();
+    if (!last) return 'web_image.png';
+    const decoded = decodeURIComponent(last).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_');
+    return decoded || 'web_image.png';
+  } catch {
+    return 'web_image.png';
   }
 }
 
@@ -510,48 +560,61 @@ function getActiveItem(): QueueItem | undefined {
 }
 
 async function processQueue(): Promise<void> {
-  if (isProcessing) return;
+  if (isProcessing) {
+    processAgain = true;
+    return;
+  }
   isProcessing = true;
 
-  const currentOpts = getCurrentOptions();
+  try {
+    do {
+      processAgain = false;
+      const itemsToProcess = [
+        ...queue.filter((q) => q.id === activeItemId && q.status !== 'completed'),
+        ...queue.filter((q) => q.id !== activeItemId && q.status !== 'completed'),
+      ];
 
-  // Prioritize active item first for instant live preview feedback
-  const itemsToProcess = [
-    ...queue.filter((q) => q.id === activeItemId && q.status !== 'completed'),
-    ...queue.filter((q) => q.id !== activeItemId && q.status !== 'completed'),
-  ];
+      for (const item of itemsToProcess) {
+        item.status = 'processing';
+        renderQueueList();
 
-  for (const item of itemsToProcess) {
-    item.status = 'processing';
-    renderQueueList();
+        try {
+          const currentOpts = getCurrentOptions();
+          const result = await convertImage(
+            item.originalBlob,
+            currentOpts,
+            item.name,
+            item.originalSize
+          );
 
-    try {
-      item.options = currentOpts;
-      const result = await convertImage(
-        item.originalBlob,
-        currentOpts,
-        item.name,
-        item.originalSize
-      );
+          if (item.status !== 'processing') continue;
+          item.options = currentOpts;
+          item.result = result;
+          item.status = 'completed';
+        } catch (err: unknown) {
+          if (item.status !== 'processing') continue;
+          console.error('Conversion failed for item:', item.name, err);
+          item.status = 'error';
+          item.error = err instanceof Error ? err.message : 'Conversion error';
+        }
 
-      item.result = result;
-      item.status = 'completed';
-    } catch (err: any) {
-      console.error('Conversion failed for item:', item.name, err);
-      item.status = 'error';
-      item.error = err.message || 'Conversion error';
-    }
-
-    renderQueueList();
-    renderBatchSummary();
-    updateSelectionUI();
-    if (item.id === activeItemId) {
-      updateActivePreview();
-    }
+        renderQueueList();
+        renderBatchSummary();
+        updateSelectionUI();
+        if (item.id === activeItemId) {
+          updateActivePreview();
+        }
+      }
+    } while (processAgain);
+  } finally {
+    isProcessing = false;
   }
 
-  isProcessing = false;
   updateStudioUI();
+  const active = getActiveItem();
+  if (active && isItemStale(active)) {
+    void regenerateSingleItem(active.id);
+  }
 }
 
 function reprocessQueue(): void {
@@ -568,22 +631,27 @@ async function regenerateSingleItem(itemId: string): Promise<void> {
 
   item.status = 'processing';
   renderQueueList();
+  if (item.id === activeItemId) {
+    updateActivePreview();
+  }
 
   try {
     const currentOpts = getCurrentOptions();
-    item.options = currentOpts;
     const result = await convertImage(
       item.originalBlob,
       currentOpts,
       item.name,
       item.originalSize
     );
+    if (item.status !== 'processing') return;
+    item.options = currentOpts;
     item.result = result;
     item.status = 'completed';
-  } catch (err: any) {
+  } catch (err: unknown) {
+    if (item.status !== 'processing') return;
     console.error('Regeneration failed for item:', item.name, err);
     item.status = 'error';
-    item.error = err.message || 'Conversion error';
+    item.error = err instanceof Error ? err.message : 'Conversion error';
   }
 
   renderQueueList();
@@ -591,6 +659,7 @@ async function regenerateSingleItem(itemId: string): Promise<void> {
     updateActivePreview();
   }
   renderBatchSummary();
+  updateSelectionUI();
 }
 
 function updateSelectionUI(): void {
@@ -603,6 +672,12 @@ function updateSelectionUI(): void {
   }
 
   queueCountBadge.textContent = `${selectedCount}/${totalCount} Selected`;
+
+  const btnReprocessAll = document.getElementById('btn-reprocess-all');
+  if (btnReprocessAll) {
+    const hasStale = queue.some((q) => isItemStale(q));
+    btnReprocessAll.classList.toggle('is-stale', hasStale);
+  }
 
   const completedSelected = queue.filter(
     (q) => selectedItemIds.has(q.id) && q.status === 'completed' && q.result
@@ -647,7 +722,21 @@ function updateActivePreview(): void {
   if (!active) return;
 
   splitImgOriginal.src = active.originalDataUrl;
-  splitTagConverted.textContent = `Converted (${getFormatOption(selectedFormat).label})`;
+  const stale = isItemStale(active);
+  const convertedFormat = active.result
+    ? getFormatOption(active.result.format).label
+    : getFormatOption(selectedFormat).label;
+  splitTagConverted.textContent = stale
+    ? `Converted (${convertedFormat}, outdated)`
+    : `Converted (${convertedFormat})`;
+
+  if (active.status === 'processing') {
+    splitImgConverted.src = active.result?.dataUrl || active.originalDataUrl;
+    activeImageMeta.textContent = `${active.originalWidth} × ${active.originalHeight} px`;
+    activeSavingsDisplay.innerHTML = `<span class="badge badge-primary">Processing...</span>`;
+    btnDownloadActive.disabled = !active.result;
+    return;
+  }
 
   if (active.result) {
     splitImgConverted.src = active.result.dataUrl;
@@ -658,6 +747,7 @@ function updateActivePreview(): void {
     activeSavingsDisplay.innerHTML = `
       <span>${formatBytes(active.originalSize)} ➔ <strong>${formatBytes(active.result.size)}</strong></span>
       <span class="badge ${badgeClass}">${savings.formatted}</span>
+      ${stale ? '<span class="badge badge-amber">Outdated</span>' : ''}
     `;
     btnDownloadActive.disabled = false;
   } else {
@@ -704,13 +794,21 @@ function renderQueueList(): void {
     } else if (item.status === 'completed' && item.result) {
       const sav = calculateSavings(item.originalSize, item.result.size);
       const bClass = sav.isReduction ? 'badge-emerald' : 'badge-amber';
+      const stale = isItemStale(item);
       statusMeta = `
         <span class="size-orig">${formatBytes(item.originalSize)}</span>
         <span class="size-arrow">➔</span>
         <span class="size-conv">${formatBytes(item.result.size)}</span>
         <span class="badge ${bClass}">${sav.formatted}</span>
+        ${stale ? '<span class="badge badge-amber">Outdated</span>' : ''}
       `;
     }
+
+    const stale = isItemStale(item);
+    const regenClass = stale ? 'btn btn-icon btn-regen-item is-stale' : 'btn btn-icon btn-regen-item';
+    const regenTitle = stale
+      ? 'Settings changed — regenerate'
+      : 'Regenerate with current settings';
 
     card.innerHTML = `
       <input type="checkbox" class="item-checkbox queue-item-chk" ${isChecked ? 'checked' : ''} title="Select for download" />
@@ -720,7 +818,7 @@ function renderQueueList(): void {
         <div class="queue-item-meta">${statusMeta}</div>
       </div>
       <div class="queue-item-actions">
-        <button class="btn btn-icon btn-regen-item" title="Regenerate with current settings">
+        <button class="${regenClass}" title="${regenTitle}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
           </svg>

@@ -1,4 +1,4 @@
-import { ImageFormat, ImageFormatOption } from './types';
+import { ConversionOptions, ImageFormat, ImageFormatOption } from './types';
 
 export const FORMAT_OPTIONS: ImageFormatOption[] = [
   {
@@ -79,6 +79,27 @@ export function calculateSavings(originalSize: number, newSize: number): {
   const isReduction = diff >= 0;
   const formatted = `${isReduction ? '-' : '+'}${Math.abs(percentage).toFixed(1)}%`;
   return { percentage, isReduction, formatted };
+}
+
+export function areConversionOptionsEqual(
+  a: ConversionOptions,
+  b: ConversionOptions
+): boolean {
+  return (
+    a.format === b.format &&
+    a.quality === b.quality &&
+    a.scale === b.scale &&
+    a.width === b.width &&
+    a.height === b.height &&
+    a.keepAspectRatio === b.keepAspectRatio &&
+    (a.backgroundColor ?? 'transparent') === (b.backgroundColor ?? 'transparent') &&
+    (a.filenamePattern ?? '{name}-converted.{ext}') ===
+      (b.filenamePattern ?? '{name}-converted.{ext}') &&
+    !!a.filters?.grayscale === !!b.filters?.grayscale &&
+    !!a.filters?.invert === !!b.filters?.invert &&
+    (a.filters?.brightness ?? 100) === (b.filters?.brightness ?? 100) &&
+    (a.filters?.contrast ?? 100) === (b.filters?.contrast ?? 100)
+  );
 }
 
 export function extractBaseName(filename: string): string {
