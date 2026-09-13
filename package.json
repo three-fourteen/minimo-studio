@@ -1,7 +1,7 @@
 {
   "name": "minimo-studio-extension",
-  "version": "1.0.0",
-  "description": "Minimo Studio - Smart Image Converter & Studio Chrome Extension (WebP, JPG, PNG, AVIF & more)",
+  "version": "1.0.1",
+  "description": "Minimo Studio — local image converter and studio for Chrome",
   "type": "module",
   "scripts": {
     "dev": "vite",

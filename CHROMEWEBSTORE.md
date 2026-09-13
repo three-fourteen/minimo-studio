@@ -1,7 +1,7 @@
 # Chrome Web Store Listing — Minimo Studio
 
-> Last Updated: 2026-09-11  
-> Version: 1.0.0
+> Last Updated: 2026-09-13  
+> Version: 1.0.1
 
 ---
 
@@ -15,19 +15,25 @@ Minimo - Image Converter & Studio
 
 **Short Description** [REQUIRED]
 ```text
-Convert and optimize images to WebP, AVIF, PNG, JPG, BMP & ICO with a quick popup, side panel studio, and right-click context menu.
+Convert and optimize images locally with a toolbar popup, side panel studio, and right-click save.
 ```
-*(132 / 132 characters)*
+*(98 / 132 characters)*
+
+Do **not** list every output format in the short description. CWS rejected 1.0.0 for keyword stuffing (`WebP, AVIF, PNG, JPG, BMP & ICO` — Yellow Argon).
 
 **Category** [REQUIRED]
 ```text
-Photos
+Productivity → Tools
 ```
-*(Secondary: Productivity / Developer Tools)*
+*(Spanish dashboard: Productividad → Herramientas.)*
+
+Chrome no longer has a **Photos** category. **Tools** is the fit for a converter utility.
+
+Lifestyle → Art & design (`Arte y diseño`) is the only other reasonable option if you want a creative-tools shelf instead of utilities.
 
 **Single Purpose Statement** [REQUIRED]
 ```text
-Convert, optimize, and resize images locally in the browser across WebP, AVIF, PNG, JPG, BMP, and ICO formats.
+Convert, optimize, and resize images locally in the browser.
 ```
 
 **Primary Language** [REQUIRED]
@@ -42,40 +48,21 @@ English
 *(Copy-paste directly into Chrome Web Store Developer Dashboard)*
 
 ```text
-Minimo Studio is a fast, lightweight, and 100% private image converter and optimizer that runs entirely inside your browser.
+Minimo Studio converts and optimizes images entirely in your browser. Nothing is uploaded to a server.
 
-Convert, compress, and resize images across WebP, AVIF, PNG, JPG, BMP, and ICO with no server uploads and complete privacy.
+Open the toolbar popup to drop or paste a file, or right-click an image on a page to convert it or send it to the studio. The side panel lets you compare original and converted results, adjust quality and size, and download one file or a ZIP of the queue.
 
-KEY FEATURES
+Settings apply to new uploads. Use regenerate when you want existing queue items to pick up a new recipe.
 
-• Right-Click Any Web Image: Convert and download any image directly from the context menu (WebP, PNG, JPG, AVIF) or open it instantly in the side panel studio.
-• Side Panel Studio: An interactive workspace featuring a side-by-side split comparison slider to inspect quality before downloading.
-• Quick Toolbar Popup: Fast drag-and-drop or clipboard paste (Cmd+V / Ctrl+V) for instant conversions on the go.
-• Batch Processing & Selective Download: Convert dozens of images simultaneously. Download all as a ZIP archive or pick individual files.
-• Precision Controls: Adjust compression quality (1-100%), scale percentages (25% to 200%), or set exact width and height with aspect ratio locking.
-• Color & Transparency Tools: Fill alpha transparency with solid colors (white, black, custom color) or apply grayscale/invert filters.
-• Custom Filename Patterns: Automate output naming with dynamic variables ({name}, {width}, {height}, {ext}).
-• Dark & Light Modes: Fully adaptive glassmorphic UI matching your system preference.
+You can fill transparent backgrounds when saving to a format that does not support alpha, apply grayscale or invert, and name outputs with simple patterns such as {name}-converted.{ext}.
 
-SUPPORTED FORMATS
-
-• WebP (Lossy & Lossless with alpha)
-• AVIF (Ultra-efficient next-generation compression)
-• JPG / JPEG (Configurable background color fill)
-• PNG (Lossless with alpha channel)
-• BMP (Standard bitmap)
-• ICO (favicon)
-
-100% PRIVATE & OFFLINE
-
-All conversions run locally in your browser. Images are never uploaded to a remote server or third-party service.
+Works with everyday photo and web formats, including JPEG, PNG, and WebP.
 
 HOW TO USE
 
-1. Click the Minimo icon in your toolbar to open the quick converter.
-2. Drag and drop images or paste from your clipboard (Cmd+V / Ctrl+V).
-3. Select your target format and quality slider.
-4. Click Download or open the Side Panel Studio for advanced split-view comparison and batch ZIP export.
+1. Click the Minimo icon in the toolbar.
+2. Drop or paste an image, or right-click an image on a webpage.
+3. Choose format and quality, then download — or open the studio for a side-by-side check and batch ZIP.
 ```
 
 ---
@@ -89,7 +76,7 @@ HOW TO USE
 | `storage` | permissions | Used to persist user settings (default format, quality preset, theme) and temporarily transfer image queue items between the popup and the side panel. |
 | `sidePanel` | permissions | Powers the advanced Side Panel Studio interface with split-view comparison and batch queue tools. |
 | `offscreen` | permissions | Executes headless HTML5 Canvas rendering for image conversion triggered via the right-click context menu. |
-| `<all_urls>` | host_permissions | Required to fetch and convert web images when the user explicitly right-clicks an image on an arbitrary webpage. All processing is strictly local. |
+| `<all_urls>` | host_permissions | Required to fetch the image file the user just right-clicked, on any site. `activeTab` is not enough: it only unlocks the current tab, and most images are served from a different CDN origin than the page. A fixed site list would break “right-click any image.” Fetch runs only after that explicit click; conversion stays on-device; nothing is uploaded. |
 
 ---
 
@@ -129,15 +116,16 @@ HOW TO USE
    ```bash
    pnpm run pack
    ```
-   This generates `minimo-studio-v1.0.0.zip` ready for upload.
+   This generates `minimo-studio-v1.0.1.zip` ready for upload.
 
 2. **Open Chrome Developer Dashboard**:
    - Go to [https://chrome.google.com/webstore/devconsole/](https://chrome.google.com/webstore/devconsole/)
-   - Click **New Item** and upload `minimo-studio-v1.0.0.zip`.
+   - Open the existing item (`bpbhlhpilohpmcnbjacelohmeoaoamaf`) and upload `minimo-studio-v1.0.1.zip` (do not create a new item).
+   - Replace the short and detailed descriptions with the copy above before resubmitting.
 
 3. **Fill Out Store Listing Tab**:
    - Copy-paste the **Title**, **Short Description**, and **Detailed Description** from above.
-   - Select Category: **Photos**.
+   - Select Category: **Productivity → Tools** (`Herramientas`). Do not look for Photos — it is gone.
    - Upload your 128×128 icon and at least 1 screenshot (1280×800).
 
 4. **Fill Out Privacy Tab**:
@@ -147,3 +135,12 @@ HOW TO USE
 
 5. **Submit for Review**:
    - Click **Submit for Review**. Review typically takes 24–48 hours for extensions with no external network activity.
+
+---
+
+## Version History
+
+| Version | Date | Notes |
+| :--- | :--- | :--- |
+| 1.0.1 | 2026-09-13 | Listing copy: remove format keyword list (CWS Yellow Argon). |
+| 1.0.0 | 2026-09-11 | Initial store submission. |

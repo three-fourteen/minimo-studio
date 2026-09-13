@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Minimo - Image Converter & Studio",
-  "version": "1.0.0",
-  "description": "Convert and optimize images to WebP, AVIF, PNG, JPG, BMP & ICO with a quick popup, side panel studio, and right-click context menu.",
+  "version": "1.0.1",
+  "description": "Convert and optimize images locally with a toolbar popup, side panel studio, and right-click save.",
   "permissions": [
     "contextMenus",
     "downloads",
