@@ -1,5 +1,6 @@
 import { convertImage } from '../shared/converter';
 import { triggerBlobDownload } from '../shared/download';
+import { mountSupportAction } from '../shared/distribution';
 import { initTheme } from '../shared/theme';
 import { ConversionOptions, ImageFormat, QueueItem } from '../shared/types';
 import {
@@ -46,6 +47,7 @@ const btnThemeToggle = document.getElementById('btn-theme-toggle') as HTMLElemen
 // Initialize
 function init(): void {
   initTheme(btnThemeToggle);
+  if (btnThemeToggle.parentElement) mountSupportAction(btnThemeToggle.parentElement);
   renderFormatButtons();
   setupEventListeners();
   updateQualityVisibility();

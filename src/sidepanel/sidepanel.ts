@@ -1,5 +1,6 @@
 import { convertImage } from '../shared/converter';
 import { triggerBlobDownload } from '../shared/download';
+import { mountSupportAction } from '../shared/distribution';
 import { initTheme } from '../shared/theme';
 import { ConversionOptions, ImageFormat, QueueItem } from '../shared/types';
 import {
@@ -81,6 +82,7 @@ const batchZipBtnText = document.getElementById('batch-zip-btn-text') as HTMLSpa
 // Initialization
 function init(): void {
   initTheme(btnThemeToggle);
+  if (btnThemeToggle.parentElement) mountSupportAction(btnThemeToggle.parentElement);
   renderFormatButtons();
   setupEventListeners();
   setupSplitSlider();
