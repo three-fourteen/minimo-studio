@@ -2,7 +2,7 @@ import { getLastFocusedNormalTab } from '../shared/active-tab';
 import { requestFullPageCapture } from '../shared/capture-client';
 import { convertImage } from '../shared/converter';
 import { triggerBlobDownload } from '../shared/download';
-import { mountSupportAction } from '../shared/distribution';
+import { initCreditsHelp } from '../shared/distribution';
 import { initTheme } from '../shared/theme';
 import { ConversionOptions, ImageFormat, QueueItem } from '../shared/types';
 import {
@@ -46,11 +46,12 @@ const btnOpenSidepanel = document.getElementById('btn-open-sidepanel') as HTMLBu
 const btnCapturePage = document.getElementById('btn-capture-page') as HTMLButtonElement;
 const downloadBtnText = document.getElementById('download-btn-text') as HTMLSpanElement;
 const btnThemeToggle = document.getElementById('btn-theme-toggle') as HTMLElement;
+const btnHelp = document.getElementById('btn-help') as HTMLElement;
 
 // Initialize
 function init(): void {
   initTheme(btnThemeToggle);
-  if (btnThemeToggle.parentElement) mountSupportAction(btnThemeToggle.parentElement);
+  initCreditsHelp(btnHelp);
   renderFormatButtons();
   setupEventListeners();
   updateQualityVisibility();

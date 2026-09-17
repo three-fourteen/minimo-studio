@@ -1,4 +1,5 @@
 .popup-container {
+  position: relative;
   width: 380px;
   min-height: 480px;
   max-height: 580px;
