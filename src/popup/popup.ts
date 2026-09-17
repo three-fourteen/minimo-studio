@@ -1,3 +1,5 @@
+import { getLastFocusedNormalTab } from '../shared/active-tab';
+import { requestFullPageCapture } from '../shared/capture-client';
 import { convertImage } from '../shared/converter';
 import { triggerBlobDownload } from '../shared/download';
 import { mountSupportAction } from '../shared/distribution';
@@ -41,6 +43,7 @@ const popupFooter = document.getElementById('popup-footer') as HTMLElement;
 const btnDownloadAll = document.getElementById('btn-download-all') as HTMLButtonElement;
 const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
 const btnOpenSidepanel = document.getElementById('btn-open-sidepanel') as HTMLButtonElement;
+const btnCapturePage = document.getElementById('btn-capture-page') as HTMLButtonElement;
 const downloadBtnText = document.getElementById('download-btn-text') as HTMLSpanElement;
 const btnThemeToggle = document.getElementById('btn-theme-toggle') as HTMLElement;
 
@@ -56,9 +59,8 @@ function init(): void {
 }
 
 function cacheCurrentTab(): void {
-  if (typeof chrome === 'undefined' || !chrome.tabs?.query) return;
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    currentTabId = tabs[0]?.id;
+  void getLastFocusedNormalTab().then((tab) => {
+    currentTabId = tab?.id;
   });
 }
 
@@ -205,6 +207,10 @@ function setupEventListeners(): void {
       updateSelectionUI();
     });
   }
+
+  btnCapturePage.addEventListener('click', () => {
+    void requestFullPageCapture(btnCapturePage, currentTabId);
+  });
 
   // Side Panel Launcher
   btnOpenSidepanel.addEventListener('click', async () => {

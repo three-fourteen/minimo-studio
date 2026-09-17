@@ -1,7 +1,7 @@
 # Chrome Web Store Listing — Minimo Studio
 
-> Last Updated: 2026-09-13  
-> Version: 1.0.1
+> Last Updated: 2026-09-17  
+> Version: 1.0.2
 
 ---
 
@@ -15,9 +15,9 @@ Minimo - Image Converter & Studio
 
 **Short Description** [REQUIRED]
 ```text
-Convert and optimize images locally with a toolbar popup, side panel studio, and right-click save.
+Convert and optimize images locally. Capture a full page, convert from the popup, or right-click save.
 ```
-*(98 / 132 characters)*
+*(102 / 132 characters)*
 
 Do **not** list every output format in the short description. CWS rejected 1.0.0 for keyword stuffing (`WebP, AVIF, PNG, JPG, BMP & ICO` — Yellow Argon).
 
@@ -33,7 +33,7 @@ Lifestyle → Art & design (`Arte y diseño`) is the only other reasonable optio
 
 **Single Purpose Statement** [REQUIRED]
 ```text
-Convert, optimize, and resize images locally in the browser.
+Convert, optimize, resize, and capture full-page screenshots locally in the browser.
 ```
 
 **Primary Language** [REQUIRED]
@@ -50,7 +50,7 @@ English
 ```text
 Minimo Studio converts and optimizes images entirely in your browser. Nothing is uploaded to a server.
 
-Open the toolbar popup to drop or paste a file, or right-click an image on a page to convert it or send it to the studio. The side panel lets you compare original and converted results, adjust quality and size, and download one file or a ZIP of the queue.
+Open the toolbar popup to drop or paste a file, or right-click an image on a page to convert it or send it to the studio. Capture a full webpage from the popup, the studio, or the right-click menu; the screenshot opens in the studio queue. The side panel lets you compare original and converted results, adjust quality and size, and download one file or a ZIP of the queue.
 
 Settings apply to new uploads. Use regenerate when you want existing queue items to pick up a new recipe.
 
@@ -61,7 +61,7 @@ Works with everyday photo and web formats, including JPEG, PNG, and WebP.
 HOW TO USE
 
 1. Click the Minimo icon in the toolbar.
-2. Drop or paste an image, or right-click an image on a webpage.
+2. Drop or paste an image, right-click an image on a webpage, or capture the full page into Studio.
 3. Choose format and quality, then download — or open the studio for a side-by-side check and batch ZIP.
 ```
 
@@ -71,12 +71,13 @@ HOW TO USE
 
 | Permission | Type | Plain-English Justification for Review Team |
 | :--- | :--- | :--- |
-| `contextMenus` | permissions | Allows users to right-click any image on a webpage to instantly convert and download it in their desired format or open it in the Side Panel Studio. |
+| `contextMenus` | permissions | Allows users to right-click a webpage to capture a full-page screenshot into Studio, or right-click an image to convert and download it or open it in the Side Panel Studio. |
 | `downloads` | permissions | Allows saving the converted image files and batch ZIP archives directly to the user's local Downloads folder. |
 | `storage` | permissions | Used to persist user settings (default format, quality preset, theme) and temporarily transfer image queue items between the popup and the side panel. |
 | `sidePanel` | permissions | Powers the advanced Side Panel Studio interface with split-view comparison and batch queue tools. |
-| `offscreen` | permissions | Executes headless HTML5 Canvas rendering for image conversion triggered via the right-click context menu. |
-| `<all_urls>` | host_permissions | Required to fetch the image file the user just right-clicked, on any site. `activeTab` is not enough: it only unlocks the current tab, and most images are served from a different CDN origin than the page. A fixed site list would break “right-click any image.” Fetch runs only after that explicit click; conversion stays on-device; nothing is uploaded. |
+| `offscreen` | permissions | Executes headless HTML5 Canvas rendering for image conversion and for stitching full-page screenshot slices after a user-initiated capture. |
+| `scripting` | permissions | Injects a short helper into the active page after the user asks for a full-page screenshot, so the extension can hide sticky bars, scroll the page, and restore it. The script does not run otherwise. |
+| `<all_urls>` | host_permissions | Required to fetch a right-clicked image (often on a CDN) and to capture the visible tab when the user requests a full-page screenshot from the popup or Studio. `activeTab` is not enough for those surfaces. Fetch and capture run only after that explicit action; work stays on-device; nothing is uploaded. |
 
 ---
 
@@ -116,11 +117,11 @@ HOW TO USE
    ```bash
    pnpm run pack
    ```
-   This generates `minimo-studio-v1.0.1.zip` ready for upload.
+   This generates `minimo-studio-v1.0.2.zip` ready for upload.
 
 2. **Open Chrome Developer Dashboard**:
    - Go to [https://chrome.google.com/webstore/devconsole/](https://chrome.google.com/webstore/devconsole/)
-   - Open the existing item (`bpbhlhpilohpmcnbjacelohmeoaoamaf`) and upload `minimo-studio-v1.0.1.zip` (do not create a new item).
+   - Open the existing item (`bpbhlhpilohpmcnbjacelohmeoaoamaf`) and upload `minimo-studio-v1.0.2.zip` (do not create a new item).
    - Replace the short and detailed descriptions with the copy above before resubmitting.
 
 3. **Fill Out Store Listing Tab**:
@@ -142,5 +143,6 @@ HOW TO USE
 
 | Version | Date | Notes |
 | :--- | :--- | :--- |
+| 1.0.2 | 2026-09-17 | Full-page screenshot into Studio from context menu, popup, and side panel. |
 | 1.0.1 | 2026-09-13 | Listing copy: remove format keyword list (CWS Yellow Argon). |
 | 1.0.0 | 2026-09-11 | Initial store submission. |

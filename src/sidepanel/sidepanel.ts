@@ -1,3 +1,5 @@
+import { getLastFocusedNormalTab } from '../shared/active-tab';
+import { claimPendingScreenshot, requestFullPageCapture } from '../shared/capture-client';
 import { convertImage } from '../shared/converter';
 import { triggerBlobDownload } from '../shared/download';
 import { mountSupportAction } from '../shared/distribution';
@@ -32,6 +34,7 @@ let activeItemId: string | null = null;
 let isProcessing: boolean = false;
 let processAgain = false;
 let settingsDebounce: ReturnType<typeof setTimeout>;
+let currentTabId: number | undefined;
 const selectedItemIds = new Set<string>();
 const importingSrcUrls = new Set<string>();
 
@@ -46,6 +49,7 @@ const studioQualityVal = document.getElementById('studio-quality-val') as HTMLSp
 const studioDropzone = document.getElementById('studio-dropzone') as HTMLDivElement;
 const studioFileInput = document.getElementById('studio-file-input') as HTMLInputElement;
 const btnHeaderAdd = document.getElementById('btn-header-add') as HTMLButtonElement;
+const btnCapturePage = document.getElementById('btn-capture-page') as HTMLButtonElement;
 const btnThemeToggle = document.getElementById('btn-theme-toggle') as HTMLElement;
 
 const comparisonSection = document.getElementById('comparison-section') as HTMLElement;
@@ -88,6 +92,14 @@ function init(): void {
   setupSplitSlider();
   updateQualityPresetButtons(85);
   checkPendingImports();
+  void claimPendingScreenshot(importFromPayload);
+  cacheCurrentTab();
+}
+
+function cacheCurrentTab(): void {
+  void getLastFocusedNormalTab().then((tab) => {
+    currentTabId = tab?.id;
+  });
 }
 
 function renderFormatButtons(): void {
@@ -182,6 +194,9 @@ function setupEventListeners(): void {
   // Dropzone & File input
   studioDropzone.addEventListener('click', () => studioFileInput.click());
   btnHeaderAdd.addEventListener('click', () => studioFileInput.click());
+  btnCapturePage.addEventListener('click', () => {
+    void requestFullPageCapture(btnCapturePage, currentTabId);
+  });
 
   studioFileInput.addEventListener('change', (e) => {
     const files = (e.target as HTMLInputElement).files;
@@ -395,6 +410,14 @@ function setupEventListeners(): void {
         const srcUrl = changes.pendingContextMenuImage.newValue;
         void importFromPayload({ srcUrl });
         chrome.storage.local.remove('pendingContextMenuImage');
+      }
+    });
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message?.type === 'SCREENSHOT_READY') {
+        void claimPendingScreenshot(importFromPayload);
       }
     });
   }

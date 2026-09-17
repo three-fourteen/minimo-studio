@@ -1,5 +1,7 @@
 export type ImageFormat = 'webp' | 'jpeg' | 'png' | 'avif' | 'bmp' | 'ico';
 
+export const MAX_CANVAS_DIMENSION = 16384;
+
 export interface ImageFormatOption {
   id: ImageFormat;
   label: string;
@@ -57,12 +59,35 @@ export interface QueueItem {
   timestamp: number;
 }
 
+export interface CaptureSlice {
+  dataUrl: string;
+  y: number;
+}
+
+export interface StitchPayload {
+  slices: CaptureSlice[];
+  viewportHeight: number;
+  pageHeight: number;
+  dpr: number;
+  filename: string;
+}
+
+export interface PendingScreenshot {
+  dataUrl: string;
+  filename: string;
+}
+
 export interface ExtensionMessage {
   type:
     | 'CONVERT_IMAGE_URL'
     | 'CONVERT_RESULT'
     | 'SEND_TO_SIDEPANEL'
     | 'OPEN_SIDEPANEL'
-    | 'PING';
+    | 'PING'
+    | 'CAPTURE_FULL_PAGE'
+    | 'SCREENSHOT_READY'
+    | 'OFFSCREEN_STITCH'
+    | 'OFFSCREEN_CONVERT'
+    | 'OFFSCREEN_CLAIM_SCREENSHOT';
   payload?: any;
 }
