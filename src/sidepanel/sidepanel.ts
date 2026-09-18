@@ -796,9 +796,17 @@ function renderBatchSummary(): void {
   const totalConverted = completed.reduce((sum, q) => sum + (q.result?.size || 0), 0);
   const totalSavings = calculateSavings(totalOriginal, totalConverted);
 
+  const sizeDelta = Math.abs(totalOriginal - totalConverted);
+  const savingsClass = totalSavings.isReduction
+    ? 'summary-savings-highlight'
+    : 'summary-savings-highlight is-increase';
+  const savingsLabel = totalSavings.isReduction
+    ? `Saved ${totalSavings.formatted} (${formatBytes(sizeDelta)})`
+    : `${totalSavings.formatted} (${formatBytes(sizeDelta)})`;
+
   batchSummaryBar.innerHTML = `
     <div>Batch: <strong>${formatBytes(totalOriginal)}</strong> ➔ <strong>${formatBytes(totalConverted)}</strong></div>
-    <div class="summary-savings-highlight">Saved ${totalSavings.formatted} (${formatBytes(Math.max(0, totalOriginal - totalConverted))})</div>
+    <div class="${savingsClass}">${savingsLabel}</div>
   `;
 }
 

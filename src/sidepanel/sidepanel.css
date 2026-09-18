@@ -228,6 +228,10 @@
   color: var(--emerald);
 }
 
+.summary-savings-highlight.is-increase {
+  color: var(--rose);
+}
+
 /* Studio Queue List */
 .studio-queue-list {
   display: flex;
