@@ -58,6 +58,25 @@
   gap: 6px;
 }
 
+.app-header .header-actions .btn {
+  height: 32px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.app-header .header-actions .btn:not(.btn-icon) {
+  padding: 0 10px;
+  gap: 6px;
+}
+
+.app-header .header-actions .btn:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
