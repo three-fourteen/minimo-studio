@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Minimo - Image Converter & Studio",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Convert and optimize images locally. Capture a full page, convert from the popup, or right-click save.",
   "permissions": [
     "contextMenus",
