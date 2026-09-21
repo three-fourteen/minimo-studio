@@ -1,6 +1,6 @@
 {
   "name": "minimo-studio-extension",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Minimo Studio — local image converter and studio for Chrome",
   "type": "module",
   "scripts": {

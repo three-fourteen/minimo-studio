@@ -23,14 +23,22 @@ chrome.runtime.onStartup.addListener(() => {
 function createContextMenus(): void {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
+      id: MENU_PARENT,
+      title: 'Minimo Studio',
+      contexts: ['page', 'image', 'frame'],
+    });
+
+    chrome.contextMenus.create({
       id: MENU_FULL_PAGE_SCREENSHOT,
+      parentId: MENU_PARENT,
       title: 'Capture full page in Studio…',
       contexts: ['page', 'image', 'frame'],
     });
 
     chrome.contextMenus.create({
-      id: MENU_PARENT,
-      title: 'Minimo Studio',
+      id: 'minimo-sep-capture',
+      parentId: MENU_PARENT,
+      type: 'separator',
       contexts: ['image'],
     });
 

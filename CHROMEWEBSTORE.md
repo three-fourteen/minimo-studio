@@ -1,7 +1,7 @@
 # Chrome Web Store Listing — Minimo Studio
 
-> Last Updated: 2026-09-17  
-> Version: 1.0.3
+> Last Updated: 2026-09-21  
+> Version: 1.0.4
 
 ---
 
@@ -128,11 +128,11 @@ HOW TO USE
    pnpm run pack
    ```
 
-   This generates `minimo-studio-v1.0.2.zip` ready for upload.
+   This generates `minimo-studio-v1.0.4.zip` ready for upload.
 
 2. **Open Chrome Developer Dashboard**:
    - Go to [https://chrome.google.com/webstore/devconsole/](https://chrome.google.com/webstore/devconsole/)
-   - Open the existing item (`bpbhlhpilohpmcnbjacelohmeoaoamaf`) and upload `minimo-studio-v1.0.2.zip` (do not create a new item).
+   - Open the existing item (`bpbhlhpilohpmcnbjacelohmeoaoamaf`) and upload `minimo-studio-v1.0.4.zip` (do not create a new item).
    - Replace the short and detailed descriptions with the copy above before resubmitting.
 
 3. **Fill Out Store Listing Tab**:
@@ -154,6 +154,7 @@ HOW TO USE
 
 | Version | Date       | Notes                                                                      |
 | :------ | :--------- | :------------------------------------------------------------------------- |
+| 1.0.4   | 2026-09-21 | Flatten context menu into a single Minimo Studio submenu.                  |
 | 1.0.2   | 2026-09-17 | Full-page screenshot into Studio from context menu, popup, and side panel. |
 | 1.0.1   | 2026-09-13 | Listing copy: remove format keyword list (CWS Yellow Argon).               |
 | 1.0.0   | 2026-09-11 | Initial store submission.                                                  |
