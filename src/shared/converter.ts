@@ -1,5 +1,7 @@
+import { encodeAvifBlob } from './avif-encode';
 import { ConversionOptions, ConversionResult, ImageFormat } from './types';
 import {
+  blobToDataURL,
   calculateSavings,
   createIcoBlob,
   generateOutputFilename,
@@ -7,9 +9,11 @@ import {
 } from './utils';
 
 /**
- * Checks if the current browser environment supports encoding to a given MIME type
+ * Checks if the current browser environment supports encoding to a given MIME type.
+ * AVIF is always supported via WASM when canvas encoding is unavailable.
  */
 export function isFormatEncodingSupported(format: ImageFormat): boolean {
+  if (format === 'avif') return true;
   const canvas = document.createElement('canvas');
   canvas.width = 1;
   canvas.height = 1;
@@ -193,34 +197,18 @@ export async function convertImage(
     imgBitmap.close();
   }
 
-  let outputBlob: Blob;
   const formatOpt = getFormatOption(options.format);
   const mimeType = formatOpt.mimeType;
+  // Quality clamping between 0.01 and 1.0
+  const quality = Math.max(0.01, Math.min(1.0, options.quality || 0.85));
 
-  if (options.format === 'ico') {
-    outputBlob = await createIcoBlob(canvas);
-  } else {
-    // Quality clamping between 0.01 and 1.0
-    const quality = Math.max(0.01, Math.min(1.0, options.quality || 0.85));
-
-    outputBlob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(
-              new Error(`Failed to encode canvas to format: ${options.format}`)
-            );
-          }
-        },
-        mimeType,
-        formatOpt.supportsQuality ? quality : undefined
-      );
-    });
-  }
-
-  const outputDataUrl = canvas.toDataURL(mimeType, options.quality);
+  const outputBlob = await encodeCanvasToBlob(
+    canvas,
+    ctx,
+    options.format,
+    quality
+  );
+  const outputDataUrl = await blobToDataURL(outputBlob);
   const outputSize = outputBlob.size;
   const filename = generateOutputFilename(
     originalFilename,
@@ -239,8 +227,53 @@ export async function convertImage(
     width,
     height,
     format: options.format,
-    mimeType,
+    mimeType: outputBlob.type || mimeType,
     filename,
     savingsPercentage: savings.percentage,
   };
+}
+
+/**
+ * Encodes canvas to the requested format. Chromium's canvas.toBlob falls back
+ * to PNG for unsupported types (notably AVIF) without error — detect that and
+ * use a WASM encoder when needed.
+ */
+async function encodeCanvasToBlob(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  format: ImageFormat,
+  quality: number
+): Promise<Blob> {
+  if (format === 'ico') {
+    return createIcoBlob(canvas);
+  }
+
+  // Chromium cannot encode AVIF via canvas (silently returns PNG) — use WASM.
+  if (format === 'avif') {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    return encodeAvifBlob(imageData, quality);
+  }
+
+  const formatOpt = getFormatOption(format);
+  const mimeType = formatOpt.mimeType;
+
+  const canvasBlob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(
+      (blob) => resolve(blob),
+      mimeType,
+      formatOpt.supportsQuality ? quality : undefined
+    );
+  });
+
+  if (canvasBlob && canvasBlob.type === mimeType) {
+    return canvasBlob;
+  }
+
+  if (canvasBlob) {
+    throw new Error(
+      `Browser encoded ${canvasBlob.type || 'unknown'} instead of ${mimeType}`
+    );
+  }
+
+  throw new Error(`Failed to encode canvas to format: ${format}`);
 }

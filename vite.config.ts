@@ -2,6 +2,11 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  // @jsquash/avif ships its own wasm; exclude from dep optimizer + emit .wasm assets
+  optimizeDeps: {
+    exclude: ['@jsquash/avif'],
+  },
+  assetsInclude: ['**/*.wasm'],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

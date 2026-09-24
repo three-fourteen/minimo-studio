@@ -1,7 +1,7 @@
 # Chrome Web Store Listing — Minimo Studio
 
-> Last Updated: 2026-09-21  
-> Version: 1.0.4
+> Last Updated: 2026-09-24  
+> Version: 1.0.5
 
 ---
 
@@ -83,7 +83,7 @@ HOW TO USE
 | `downloads`    | permissions      | Allows saving the converted image files and batch ZIP archives directly to the user's local Downloads folder.                                                                                                                                                                                                   |
 | `storage`      | permissions      | Used to persist user settings (default format, quality preset, theme) and temporarily transfer image queue items between the popup and the side panel.                                                                                                                                                          |
 | `sidePanel`    | permissions      | Powers the advanced Side Panel Studio interface with split-view comparison and batch queue tools.                                                                                                                                                                                                               |
-| `offscreen`    | permissions      | Executes headless HTML5 Canvas rendering for image conversion and for stitching full-page screenshot slices after a user-initiated capture.                                                                                                                                                                     |
+| `offscreen`    | permissions      | Runs on-device image conversion (canvas and local encoding) and stitches full-page screenshot slices after a user-initiated capture. No image data leaves the device.                                                                                                                                           |
 | `scripting`    | permissions      | Injects a short helper into the active page after the user asks for a full-page screenshot, so the extension can hide sticky bars, scroll the page, and restore it. The script does not run otherwise.                                                                                                          |
 | `<all_urls>`   | host_permissions | Required to fetch a right-clicked image (often on a CDN) and to capture the visible tab when the user requests a full-page screenshot from the popup or Studio. `activeTab` is not enough for those surfaces. Fetch and capture run only after that explicit action; work stays on-device; nothing is uploaded. |
 
@@ -128,11 +128,11 @@ HOW TO USE
    pnpm run pack
    ```
 
-   This generates `minimo-studio-v1.0.4.zip` ready for upload.
+   This generates `minimo-studio-v1.0.5.zip` ready for upload.
 
 2. **Open Chrome Developer Dashboard**:
    - Go to [https://chrome.google.com/webstore/devconsole/](https://chrome.google.com/webstore/devconsole/)
-   - Open the existing item (`bpbhlhpilohpmcnbjacelohmeoaoamaf`) and upload `minimo-studio-v1.0.4.zip` (do not create a new item).
+   - Open the existing item (`bpbhlhpilohpmcnbjacelohmeoaoamaf`) and upload `minimo-studio-v1.0.5.zip` (do not create a new item).
    - Replace the short and detailed descriptions with the copy above before resubmitting.
 
 3. **Fill Out Store Listing Tab**:
@@ -154,6 +154,7 @@ HOW TO USE
 
 | Version | Date       | Notes                                                                      |
 | :------ | :--------- | :------------------------------------------------------------------------- |
+| 1.0.5   | 2026-09-24 | Fix AVIF downloads (was silently saving PNG). Allow on-device WASM encoding. |
 | 1.0.4   | 2026-09-21 | Flatten context menu into a single Minimo Studio submenu.                  |
 | 1.0.2   | 2026-09-17 | Full-page screenshot into Studio from context menu, popup, and side panel. |
 | 1.0.1   | 2026-09-13 | Listing copy: remove format keyword list (CWS Yellow Argon).               |
