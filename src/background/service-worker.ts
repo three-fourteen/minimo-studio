@@ -1,4 +1,4 @@
-import { captureFullPageSlices } from './full-page-capture';
+import { captureFullPageSlices, showCaptureSuccessToast } from './full-page-capture';
 import { getLastFocusedNormalTab } from '../shared/active-tab';
 import { ImageFormat } from '../shared/types';
 
@@ -86,28 +86,40 @@ function createContextMenus(): void {
   });
 }
 
-function openSidePanelFromTab(tab?: chrome.tabs.Tab, tabId?: number): Promise<void> {
+async function openSidePanelFromTab(tab?: chrome.tabs.Tab, tabId?: number): Promise<void> {
   if (typeof chrome.sidePanel?.open !== 'function') {
-    return Promise.resolve();
+    return;
   }
-  if (tab?.id != null) {
-    return chrome.sidePanel.open({ tabId: tab.id });
+  const resolvedTabId = tab?.id ?? tabId;
+  if (resolvedTabId != null) {
+    try {
+      await chrome.sidePanel.open({ tabId: resolvedTabId });
+      return;
+    } catch (tabErr) {
+      console.warn('Failed to open side panel by tabId, trying windowId:', tabErr);
+    }
   }
-  if (tabId != null) {
-    return chrome.sidePanel.open({ tabId });
+
+  let windowId = tab?.windowId;
+  if (windowId == null && resolvedTabId != null) {
+    try {
+      const fullTab = await chrome.tabs.get(resolvedTabId);
+      windowId = fullTab.windowId;
+    } catch {
+      // Ignore
+    }
   }
-  if (tab?.windowId != null) {
-    return chrome.sidePanel.open({ windowId: tab.windowId });
+
+  if (windowId != null) {
+    await chrome.sidePanel.open({ windowId });
   }
-  return Promise.resolve();
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === MENU_FULL_PAGE_SCREENSHOT) {
-    const openPromise = openSidePanelFromTab(tab);
     void (async () => {
       try {
-        await runFullPageCapture(tab, openPromise);
+        await runFullPageCapture(tab);
       } catch (err) {
         console.error('Full page capture failed:', err);
         await showActionError();
@@ -174,15 +186,32 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message?.type as string | undefined;
 
+  if (type === 'OPEN_SIDEPANEL') {
+    const targetTabId = typeof message.tabId === 'number' ? message.tabId : sender.tab?.id;
+    if (typeof chrome.sidePanel?.open === 'function') {
+      if (targetTabId != null) {
+        void chrome.sidePanel.open({ tabId: targetTabId }).catch((err) => {
+          console.warn('Failed to open side panel by tabId from gesture:', err);
+          if (sender.tab?.windowId != null) {
+            void chrome.sidePanel.open({ windowId: sender.tab.windowId }).catch(() => {});
+          }
+        });
+      } else if (sender.tab?.windowId != null) {
+        void chrome.sidePanel.open({ windowId: sender.tab.windowId }).catch(() => {});
+      }
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+
   if (type !== 'CAPTURE_FULL_PAGE') return;
 
   const tabId = typeof message.tabId === 'number' ? message.tabId : sender.tab?.id;
-  const openPromise = openSidePanelFromTab(undefined, tabId);
 
   void (async () => {
     try {
       const tab = await resolveTab(tabId);
-      await runFullPageCapture(tab, openPromise);
+      await runFullPageCapture(tab, tabId);
       sendResponse({ success: true });
     } catch (err) {
       console.error('Full page capture failed:', err);
@@ -210,23 +239,20 @@ async function resolveTab(tabId: number | undefined): Promise<chrome.tabs.Tab | 
 
 async function runFullPageCapture(
   tab: chrome.tabs.Tab | undefined,
-  openPromise: Promise<void>
+  tabId?: number
 ): Promise<void> {
-  void openPromise.catch((err) => {
-    console.error('Failed to open side panel:', err);
-  });
-
   const locked = await acquireCaptureLock();
   if (!locked) {
     throw new Error('A capture is already running');
   }
 
   try {
-    if (!tab?.id) {
+    const targetTab = tab?.id ? tab : await resolveTab(tabId);
+    if (!targetTab?.id) {
       throw new Error('No tab to capture');
     }
 
-    const { payload } = await captureFullPageSlices(tab);
+    const { payload } = await captureFullPageSlices(targetTab);
     await ensureOffscreenDocument();
 
     const response = await chrome.runtime.sendMessage({
@@ -238,8 +264,32 @@ async function runFullPageCapture(
       throw new Error(response?.error || 'Stitch failed');
     }
 
+    // Capture and stitch are complete — open side panel now so the page
+    // was not compressed or content pushed during the capture process.
+    let opened = false;
+    try {
+      await openSidePanelFromTab(targetTab, tabId);
+      opened = true;
+    } catch (panelErr) {
+      console.warn('Could not automatically open side panel after capture:', panelErr);
+    }
+
     await notifyScreenshotReady();
-    await showActionOk();
+    if (opened) {
+      await showActionOk();
+    } else {
+      await showActionScreenshotReady();
+      if (targetTab.id != null) {
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: targetTab.id },
+            func: showCaptureSuccessToast,
+          });
+        } catch (toastErr) {
+          console.warn('Could not inject screenshot toast into tab:', toastErr);
+        }
+      }
+    }
   } finally {
     await chrome.storage.session.set({ captureState: 'idle' });
   }
@@ -327,6 +377,15 @@ async function showActionOk(): Promise<void> {
   setTimeout(() => {
     chrome.action.setBadgeText({ text: '' });
   }, 2000);
+}
+
+async function showActionScreenshotReady(): Promise<void> {
+  try {
+    await chrome.action.setBadgeText({ text: '📸' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#2563EB' });
+  } catch (err) {
+    console.warn('Failed to set screenshot action badge:', err);
+  }
 }
 
 async function showActionError(): Promise<void> {

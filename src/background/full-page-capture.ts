@@ -147,6 +147,186 @@ export function restorePageCapture(): void {
   delete bag[restoreKey];
 }
 
+/**
+ * Injected into the captured tab to show a 1-click toast to open Studio.
+ * Provides the direct user gesture needed by Chrome's sidePanel.open() API.
+ */
+export function showCaptureSuccessToast(): void {
+  const existing = document.getElementById('minimo-screenshot-toast-host');
+  if (existing) existing.remove();
+
+  const host = document.createElement('div');
+  host.id = 'minimo-screenshot-toast-host';
+  host.style.cssText =
+    'all: initial; position: fixed; top: 18px; right: 18px; z-index: 2147483647; pointer-events: none;';
+
+  const shadow = host.attachShadow({ mode: 'open' });
+
+  const style = document.createElement('style');
+  style.textContent = `
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .toast {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 12px 9px 12px;
+      background: #090d16;
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.55), 0 4px 14px -2px rgba(0, 0, 0, 0.35);
+      transform: translateY(-20px);
+      opacity: 0;
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+      user-select: none;
+    }
+    .toast.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: rgba(14, 165, 233, 0.18);
+      border: 1px solid rgba(14, 165, 233, 0.32);
+      border-radius: 8px;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f8fafc;
+      line-height: 1.25;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.2;
+    }
+    .btn-open {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 13px;
+      background: #0284c7;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+      margin-left: 4px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+    }
+    .btn-open:hover {
+      background: #0369a1;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.55);
+    }
+    .btn-open:active {
+      transform: translateY(0);
+    }
+    .btn-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #64748b;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-left: 1px;
+    }
+    .btn-close:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+    }
+  `;
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <div class="badge">📸</div>
+    <div class="info">
+      <div class="title">Screenshot ready!</div>
+      <div class="subtitle">Full page captured</div>
+    </div>
+    <button class="btn-open" id="minimo-toast-open" type="button">
+      Open Studio
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </button>
+    <button class="btn-close" id="minimo-toast-close" type="button" aria-label="Dismiss">✕</button>
+  `;
+
+  shadow.appendChild(style);
+  shadow.appendChild(toast);
+  (document.body || document.documentElement).appendChild(host);
+
+  requestAnimationFrame(() => {
+    toast.classList.add('visible');
+  });
+
+  const btnOpen = shadow.getElementById('minimo-toast-open');
+  const btnClose = shadow.getElementById('minimo-toast-close');
+
+  let timer: number | undefined = window.setTimeout(dismiss, 12000);
+
+  function dismiss(): void {
+    if (timer) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
+    window.removeEventListener('keydown', onKeyDown);
+    toast.classList.remove('visible');
+    setTimeout(() => {
+      host.remove();
+    }, 300);
+  }
+
+  function onKeyDown(e: KeyboardEvent): void {
+    if (e.key === 'Escape') {
+      dismiss();
+    }
+  }
+  window.addEventListener('keydown', onKeyDown);
+
+  btnOpen?.addEventListener('click', () => {
+    try {
+      chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
+    } catch {
+      // Ignored if runtime is not ready
+    }
+    dismiss();
+  });
+
+  btnClose?.addEventListener('click', () => {
+    dismiss();
+  });
+}
+
 export async function captureFullPageSlices(tab: chrome.tabs.Tab): Promise<{
   payload: StitchPayload;
   filename: string;

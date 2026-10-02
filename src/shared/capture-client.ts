@@ -6,10 +6,6 @@ export async function requestFullPageCapture(
     return;
   }
 
-  // sidePanel.open + sendMessage must run in this turn — any await drops the gesture.
-  if (tabId != null && typeof chrome.sidePanel?.open === 'function') {
-    void chrome.sidePanel.open({ tabId });
-  }
   const capturePromise = chrome.runtime.sendMessage({
     type: 'CAPTURE_FULL_PAGE',
     tabId,
@@ -39,6 +35,9 @@ export async function claimPendingScreenshot(
     const response = await chrome.runtime.sendMessage({ type: 'OFFSCREEN_CLAIM_SCREENSHOT' });
     const result = response?.result as { dataUrl?: string; filename?: string } | null | undefined;
     if (!result?.dataUrl) return;
+    if (chrome.action?.setBadgeText) {
+      void chrome.action.setBadgeText({ text: '' });
+    }
     await importFromPayload({ srcUrl: result.dataUrl, filename: result.filename });
   } catch (err) {
     console.error('Failed to claim screenshot:', err);

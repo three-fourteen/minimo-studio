@@ -10,7 +10,7 @@ A 100% local, private Chrome extension (Manifest V3) to convert and optimize ima
 - **🖱️ Webpage Right-Click Context Menu**:
   - Right-click **any image on any webpage** to convert and download it (WebP, PNG, JPG, AVIF).
   - Or select `Open in Minimo Studio...` to inspect and fine-tune quality before saving.
-  - Capture the **full page** into Studio from the page, image, or iframe menu.
+  - Capture the **full page** into Studio from the page, image, or iframe menu (captured at full viewport width before opening the studio).
 - **⚡ Quick Toolbar Popup**:
   - Capture the current tab as a full-page screenshot and open it in Studio.
   - Drag & drop images or paste from clipboard (<kbd>Cmd+V</kbd> / <kbd>Ctrl+V</kbd>).
